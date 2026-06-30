@@ -3,6 +3,7 @@
 __pycache__/
 *.pyc
 .agent-artifacts/
+.agent-data/
 .env
 .env.*
 !.env.example

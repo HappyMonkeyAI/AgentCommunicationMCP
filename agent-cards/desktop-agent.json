@@ -1,0 +1,8 @@
+{
+  "id": "desktop-agent",
+  "name": "Desktop Agent",
+  "description": "Desktop/user-session agent for screenshots, Downloads, Obsidian notes, and user-visible artifacts.",
+  "endpoint": "mcp://agent-communication/desktop-agent",
+  "auth": {"scheme": "bearer", "token_env": "AGENT_COMM_DESKTOP_TOKEN"},
+  "capabilities": ["screenshots", "downloads", "obsidian", "desktop-artifacts"]
+}

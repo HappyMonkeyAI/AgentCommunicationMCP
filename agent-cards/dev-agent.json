@@ -1,0 +1,8 @@
+{
+  "id": "dev-agent",
+  "name": "Dev Agent",
+  "description": "Development agent for project code, tests, git artifacts, implementation handoffs, and launcher registry context.",
+  "endpoint": "mcp://agent-communication/dev-agent",
+  "auth": {"scheme": "bearer", "token_env": "AGENT_COMM_DEV_TOKEN"},
+  "capabilities": ["code", "tests", "git", "project-context", "implementation-handoff"]
+}

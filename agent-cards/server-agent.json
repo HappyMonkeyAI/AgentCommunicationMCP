@@ -1,0 +1,8 @@
+{
+  "id": "server-agent",
+  "name": "Server Agent",
+  "description": "LAN/server operations agent for nginx, docker, services, logs, and /var/www-scoped work.",
+  "endpoint": "mcp://agent-communication/server-agent",
+  "auth": {"scheme": "bearer", "token_env": "AGENT_COMM_SERVER_TOKEN"},
+  "capabilities": ["services", "nginx", "docker", "logs", "server-artifacts"]
+}
