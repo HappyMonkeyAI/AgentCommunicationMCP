@@ -5,6 +5,8 @@ import os
 from dataclasses import dataclass
 from typing import Any
 
+from fastmcp.server.dependencies import get_access_token
+
 
 class AuthenticationError(ValueError):
     """Raised when a bearer token is missing or invalid."""
@@ -117,3 +119,29 @@ def fastmcp_auth_provider(config: AuthConfig | None = None):
 
     config = config or AuthConfig.from_env()
     return StaticTokenVerifier(tokens=config.as_fastmcp_tokens())
+
+
+def check_mcp_auth_and_scope(required_scope: str) -> Identity:
+    """Enforce token validation and scope requirements in a FastMCP request context.
+
+    If run under stdio transport (e.g. CLI or test), auth is bypassed to facilitate
+    local run tools.
+    """
+    from fastmcp.server.context import _current_transport
+    from .scopes import require_scope
+
+    transport = _current_transport.get(None)
+    if transport == "stdio":
+        return Identity(agent_id="stdio-admin", scopes={"*"}, claims={})
+
+    token = get_access_token()
+    if not token:
+        raise AuthenticationError("missing bearer token")
+
+    identity = Identity(
+        agent_id=token.client_id,
+        scopes=set(token.scopes),
+        claims=token.claims or {},
+    )
+    require_scope(identity, required_scope)
+    return identity

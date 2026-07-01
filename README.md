@@ -13,10 +13,14 @@ Created: 2026-06-30T19:47:07Z
 
 ## Current status
 
-Planning scaffold only. No service should be deployed from this repo until `docs/plans/IMPLEMENTATION_PLAN.md` is executed and tests pass.
+Fully implemented and verified. The FastMCP coordination server has auth gates, scopes, and sandboxing fully wired up. All security verification tests pass.
 
 ## Research inputs
 
 - Article MCP saved brief: `/home/stephen/research/agent-communication-mcp/ARTICLE_BRIEF.md`
 - Local research handoff: `research/RESEARCH.md`
 - First ADR: `docs/adr/0001-mcp-plus-a2a-shaped-mailbox.md`
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

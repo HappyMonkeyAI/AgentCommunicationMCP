@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 
-DEFAULT_REGISTRY_PATH = Path("/home/stephen/projects/launcher-project-registry/registry.json")
+DEFAULT_REGISTRY_PATH = Path.home() / "projects" / "launcher-project-registry" / "registry.json"
 
 
 class LauncherRegistry:
