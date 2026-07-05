@@ -43,7 +43,16 @@ Build a FastMCP HTTP/StreamableHTTP server that gives local agents safe shared t
 - `append_task_event`
 - `publish_artifact`
 
+## CLI profile routing (v2)
+
+Canonical YAML profiles: `~/projects/ai-agent-teamwork-prompt/profiles/` (override `AGENT_CLI_PROFILES_DIR`).
+
+- `list_cli_profiles`
+- `get_cli_profile`
+- `suggest_cli_for_task`
+
 ## Related local projects
 
 - `/home/stephen/projects/launcher-project-registry`
+- `/home/stephen/projects/ai-agent-teamwork-prompt`
 - `/home/stephen/projects/article-research-mcp`

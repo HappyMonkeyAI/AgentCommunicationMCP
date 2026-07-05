@@ -128,6 +128,35 @@ def read_artifact(artifact_id: str) -> dict:
     return artifact
 
 
+def list_cli_profiles() -> dict:
+    """List CLI agent profile ids (codex, agy, opencode, grok, kiro, hermes)."""
+    check_mcp_auth_and_scope("registry:read")
+    return {"profiles_dir": str(__import__("agent_communication_mcp.cli_profiles", fromlist=["profiles_dir"]).profiles_dir()), "profiles": list_cli_profiles_impl()}
+
+
+def list_cli_profiles_impl() -> list[str]:
+    from .cli_profiles import list_profile_ids
+    return list_profile_ids()
+
+
+def get_cli_profile(profile_id: str) -> dict:
+    """Return one YAML CLI profile by id."""
+    check_mcp_auth_and_scope("registry:read")
+    from .cli_profiles import load_profile
+    return {"profile": load_profile(profile_id), "found": True}
+
+
+def suggest_cli_for_task(description: str, exclude_kinds: list[str] | None = None) -> dict:
+    """Suggest best CLI agent profile for a task description (v0 keyword scoring)."""
+    check_mcp_auth_and_scope("registry:read")
+    return suggest_cli_for_task_impl(description, exclude_kinds=exclude_kinds)
+
+
+def suggest_cli_for_task_impl(description: str, exclude_kinds: list[str] | None = None) -> dict:
+    from .cli_profiles import suggest_cli_for_task as _suggest
+    return _suggest(description, exclude_kinds=exclude_kinds)
+
+
 for _tool in [
     health,
     list_agents,
@@ -143,6 +172,9 @@ for _tool in [
     publish_artifact,
     list_artifacts,
     read_artifact,
+    list_cli_profiles,
+    get_cli_profile,
+    suggest_cli_for_task,
 ]:
     mcp.tool()(_tool)
 
