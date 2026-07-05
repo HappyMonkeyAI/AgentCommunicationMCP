@@ -68,3 +68,14 @@ class LauncherRegistry:
             "adr_count": len(adrs),
             "adrs": adrs,
         }
+
+    def get_agent_coordination_meta(self) -> dict[str, Any]:
+        data = self._load()
+        ac = data.get("agent_coordination") or {}
+        default_teamwork = Path.home() / "projects" / "ai-agent-teamwork-prompt"
+        return {
+            "teamwork_repo": ac.get("teamwork_repo") or str(default_teamwork),
+            "cli_profiles_dir": ac.get("cli_profiles_dir") or str(default_teamwork / "profiles"),
+            "agents_template": ac.get("agents_template") or "templates/AGENTS.md",
+            "worker_routing_doc": ac.get("worker_routing_doc") or "docs/kanban-and-hermes-worker-cli-routing.md",
+        }

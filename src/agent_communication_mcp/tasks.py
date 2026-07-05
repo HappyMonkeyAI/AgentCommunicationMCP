@@ -5,6 +5,14 @@ from datetime import datetime, timezone
 from typing import Any
 
 from .storage import SQLiteStore
+from .cli_profiles import load_profile
+
+
+def validate_preferred_cli_profile(profile_id: str | None) -> str | None:
+    if profile_id is None or profile_id == "":
+        return None
+    load_profile(profile_id)
+    return profile_id
 
 TASK_STATES = {"submitted", "working", "input_required", "completed", "failed", "cancelled"}
 
@@ -28,7 +36,16 @@ class TaskService:
     def list_agent_inbox(self, agent_id: str) -> dict[str, Any]:
         return {"agent_id": agent_id, "messages": self.store.list_messages(agent_id), "tasks": self.store.list_tasks(agent_id)}
 
-    def submit_task(self, agent_id: str, title: str, instructions: str, project_slug: str | None = None, artifacts: list[str] | None = None) -> dict[str, Any]:
+    def submit_task(
+        self,
+        agent_id: str,
+        title: str,
+        instructions: str,
+        project_slug: str | None = None,
+        artifacts: list[str] | None = None,
+        preferred_cli_profile: str | None = None,
+    ) -> dict[str, Any]:
+        validated = validate_preferred_cli_profile(preferred_cli_profile)
         ts = _now()
         record = {
             "task_id": uuid.uuid4().hex,
@@ -37,6 +54,7 @@ class TaskService:
             "instructions": instructions,
             "project_slug": project_slug,
             "artifacts": artifacts or [],
+            "preferred_cli_profile": validated,
             "state": "submitted",
             "created_at": ts,
             "updated_at": ts,

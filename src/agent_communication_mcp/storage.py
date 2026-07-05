@@ -38,7 +38,8 @@ class SQLiteStore:
                     artifacts_json TEXT NOT NULL,
                     state TEXT NOT NULL,
                     created_at TEXT NOT NULL,
-                    updated_at TEXT NOT NULL
+                    updated_at TEXT NOT NULL,
+                    preferred_cli_profile TEXT
                 );
                 CREATE TABLE IF NOT EXISTS task_events (
                     event_id TEXT PRIMARY KEY,
@@ -50,6 +51,12 @@ class SQLiteStore:
                 );
                 """
             )
+            self._migrate_tasks(conn)
+
+    def _migrate_tasks(self, conn: sqlite3.Connection) -> None:
+        cols = {row[1] for row in conn.execute("PRAGMA table_info(tasks)").fetchall()}
+        if "preferred_cli_profile" not in cols:
+            conn.execute("ALTER TABLE tasks ADD COLUMN preferred_cli_profile TEXT")
 
     def insert_message(self, record: dict[str, Any]) -> None:
         with self._connect() as conn:
@@ -66,8 +73,19 @@ class SQLiteStore:
     def insert_task(self, record: dict[str, Any]) -> None:
         with self._connect() as conn:
             conn.execute(
-                "INSERT INTO tasks VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (record["task_id"], record["agent_id"], record["title"], record["instructions"], record.get("project_slug"), json.dumps(record["artifacts"]), record["state"], record["created_at"], record["updated_at"]),
+                "INSERT INTO tasks VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    record["task_id"],
+                    record["agent_id"],
+                    record["title"],
+                    record["instructions"],
+                    record.get("project_slug"),
+                    json.dumps(record["artifacts"]),
+                    record["state"],
+                    record["created_at"],
+                    record["updated_at"],
+                    record.get("preferred_cli_profile"),
+                ),
             )
 
     def update_task_state(self, task_id: str, state: str, updated_at: str) -> None:

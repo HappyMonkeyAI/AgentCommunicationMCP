@@ -50,6 +50,8 @@ Canonical YAML profiles: `~/projects/ai-agent-teamwork-prompt/profiles/` (overri
 - `list_cli_profiles`
 - `get_cli_profile`
 - `suggest_cli_for_task`
+- `get_coordination_bootstrap`
+- `submit_task` accepts optional `preferred_cli_profile`
 
 ## Related local projects
 

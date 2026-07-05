@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
+import os
 
 from fastmcp import FastMCP
 
@@ -76,10 +76,24 @@ def list_agent_inbox(agent_id: str) -> dict:
     return _tasks.list_agent_inbox(agent_id)
 
 
-def submit_task(agent_id: str, title: str, instructions: str, project_slug: str | None = None, artifacts: list[str] | None = None) -> dict:
-    """Submit an A2A-shaped task to a local agent."""
+def submit_task(
+    agent_id: str,
+    title: str,
+    instructions: str,
+    project_slug: str | None = None,
+    artifacts: list[str] | None = None,
+    preferred_cli_profile: str | None = None,
+) -> dict:
+    """Submit an A2A-shaped task to a local agent. Optional preferred_cli_profile (codex, agy, …) is validated against YAML profiles."""
     check_mcp_auth_and_scope("task:submit")
-    return _tasks.submit_task(agent_id, title, instructions, project_slug, artifacts)
+    return _tasks.submit_task(
+        agent_id,
+        title,
+        instructions,
+        project_slug,
+        artifacts,
+        preferred_cli_profile=preferred_cli_profile,
+    )
 
 
 def get_task(task_id: str) -> dict:
@@ -157,6 +171,30 @@ def suggest_cli_for_task_impl(description: str, exclude_kinds: list[str] | None 
     return _suggest(description, exclude_kinds=exclude_kinds)
 
 
+def get_coordination_bootstrap() -> dict:
+    """Paths and MCP tool names for CLI swarm routing (launcher registry + profiles)."""
+    check_mcp_auth_and_scope("registry:read")
+    from .cli_profiles import list_profile_ids, profiles_dir
+
+    meta = _registry.get_agent_coordination_meta()
+    teamwork = Path(meta["teamwork_repo"]).expanduser()
+    return {
+        "registry": meta,
+        "profiles_dir": str(profiles_dir()),
+        "profile_ids": list_profile_ids(),
+        "agents_template_path": str(teamwork / meta["agents_template"]),
+        "worker_routing_doc_path": str(teamwork / meta["worker_routing_doc"]),
+        "mcp_routing_tools": [
+            "get_coordination_bootstrap",
+            "suggest_cli_for_task",
+            "list_cli_profiles",
+            "get_cli_profile",
+            "submit_task",
+        ],
+        "submit_task_note": "Pass preferred_cli_profile to pin codex/agy/opencode; omit to let worker call suggest_cli_for_task on instructions.",
+    }
+
+
 for _tool in [
     health,
     list_agents,
@@ -175,6 +213,7 @@ for _tool in [
     list_cli_profiles,
     get_cli_profile,
     suggest_cli_for_task,
+    get_coordination_bootstrap,
 ]:
     mcp.tool()(_tool)
 
