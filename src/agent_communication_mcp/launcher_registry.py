@@ -6,6 +6,9 @@ from typing import Any
 
 
 DEFAULT_REGISTRY_PATH = Path.home() / "projects" / "launcher-project-registry" / "registry.json"
+DEFAULT_COORDINATION_DEFAULTS = (
+    Path.home() / "projects" / "launcher-project-registry" / "agent_coordination.defaults.json"
+)
 
 
 class LauncherRegistry:
@@ -14,8 +17,21 @@ class LauncherRegistry:
 
     def _load(self) -> dict[str, Any]:
         if not self.registry_path.exists():
-            return {"projects": []}
-        return json.loads(self.registry_path.read_text(encoding="utf-8"))
+            data: dict[str, Any] = {"projects": []}
+        else:
+            data = json.loads(self.registry_path.read_text(encoding="utf-8"))
+        self._merge_coordination_defaults(data)
+        return data
+
+    def _merge_coordination_defaults(self, data: dict[str, Any]) -> None:
+        defaults_path = self.registry_path.parent / "agent_coordination.defaults.json"
+        if not defaults_path.exists():
+            defaults_path = DEFAULT_COORDINATION_DEFAULTS
+        if not defaults_path.exists():
+            return
+        defaults = json.loads(defaults_path.read_text(encoding="utf-8"))
+        existing = data.get("agent_coordination") or {}
+        data["agent_coordination"] = {**defaults, **existing}
 
     def list_projects(self, filter_query: str = "") -> list[dict[str, Any]]:
         projects = list(self._load().get("projects", []))
