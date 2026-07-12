@@ -6,9 +6,11 @@ import os
 from fastmcp import FastMCP
 
 from .agent_cards import AgentDirectory
+from .activity import ActivityProjectionService
 from .artifacts import ArtifactStore
 from .auth import fastmcp_auth_provider, check_mcp_auth_and_scope
 from .launcher_registry import LauncherRegistry
+from .provider_readiness import ProviderReadinessService
 from .scopes import AuthorizationError
 from .storage import SQLiteStore
 from .tasks import TaskService
@@ -23,6 +25,13 @@ _registry = LauncherRegistry(os.getenv("LAUNCHER_REGISTRY_PATH", Path.home() / "
 _store = SQLiteStore(DATA_DIR / "tasks.sqlite3")
 _tasks = TaskService(_store)
 _artifacts = ArtifactStore(DATA_DIR / "artifacts")
+_providers = ProviderReadinessService()
+_activity = ActivityProjectionService(
+    _store,
+    providers=_providers,
+    default_limit=int(os.getenv("AGENT_COMM_ACTIVITY_DEFAULT_LIMIT", "50")),
+    max_limit=int(os.getenv("AGENT_COMM_ACTIVITY_MAX_LIMIT", "200")),
+)
 
 
 def health() -> dict:
@@ -195,6 +204,32 @@ def get_coordination_bootstrap() -> dict:
     }
 
 
+def get_provider_readiness(profile_id: str) -> dict:
+    """Return normalized, secret-safe readiness for one canonical CLI provider."""
+    check_mcp_auth_and_scope("registry:read")
+    return _providers.get(profile_id)
+
+
+def list_provider_readiness() -> dict:
+    """List normalized, secret-safe readiness for canonical CLI providers."""
+    check_mcp_auth_and_scope("registry:read")
+    providers = _providers.list()
+    return {"providers": providers, "count": len(providers)}
+
+
+def list_activity(limit: int | None = None) -> dict:
+    """Return a bounded newest-first projection of durable task activity."""
+    identity = check_mcp_auth_and_scope("mailbox:read")
+    agent_id = None if "*" in identity.scopes else identity.agent_id
+    return _activity.list(limit, agent_id=agent_id)
+
+
+def get_control_center(limit: int | None = None) -> dict:
+    """Return provider readiness and bounded task activity in one read-only view."""
+    check_mcp_auth_and_scope("control-center:read")
+    return _activity.control_center(limit)
+
+
 for _tool in [
     health,
     list_agents,
@@ -214,6 +249,10 @@ for _tool in [
     get_cli_profile,
     suggest_cli_for_task,
     get_coordination_bootstrap,
+    get_provider_readiness,
+    list_provider_readiness,
+    list_activity,
+    get_control_center,
 ]:
     mcp.tool()(_tool)
 

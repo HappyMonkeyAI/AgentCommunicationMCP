@@ -114,6 +114,25 @@ class SQLiteStore:
             rows = conn.execute("SELECT * FROM task_events WHERE task_id = ? ORDER BY created_at", (task_id,)).fetchall()
         return [dict(row) for row in rows]
 
+    def list_activity_events(self, limit: int, agent_id: str | None = None) -> list[dict[str, Any]]:
+        """Read task events with task references for a bounded activity projection."""
+        with self._connect() as conn:
+            query = """
+                SELECT e.event_id, e.task_id, e.state, e.message, e.created_at,
+                       t.agent_id, t.project_slug, t.artifacts_json
+                FROM task_events AS e
+                JOIN tasks AS t ON t.task_id = e.task_id
+            """
+            params: tuple[Any, ...]
+            if agent_id is None:
+                params = (limit,)
+            else:
+                query += " WHERE t.agent_id = ?"
+                params = (agent_id, limit)
+            query += " ORDER BY e.created_at DESC, e.event_id DESC LIMIT ?"
+            rows = conn.execute(query, params).fetchall()
+        return [dict(row) for row in rows]
+
 
 def _message_from_row(row: sqlite3.Row) -> dict[str, Any]:
     data = dict(row)

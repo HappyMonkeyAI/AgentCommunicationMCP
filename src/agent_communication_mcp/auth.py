@@ -94,6 +94,7 @@ def default_token_mapping() -> dict[str, dict[str, Any]]:
                 "artifact:read",
                 "artifact:write",
                 "mailbox:read",
+                "control-center:read",
                 "mailbox:write",
                 "task:submit",
                 "task:update",

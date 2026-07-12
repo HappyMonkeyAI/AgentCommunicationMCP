@@ -53,6 +53,17 @@ Canonical YAML profiles: `~/projects/ai-agent-teamwork-prompt/profiles/` (overri
 - `get_coordination_bootstrap`
 - `submit_task` accepts optional `preferred_cli_profile`
 
+## Read-only readiness and control-center projections
+
+Provider readiness reuses the canonical YAML profiles and returns a normalized, secret-safe contract: stable ID, display name, binary availability, readiness state (`unavailable`, `authentication-needed`, `ready`, or `degraded`), capabilities, redacted diagnostics, and `checked_at`. Authentication is marked ready only when a provider offers a safe, non-destructive status probe; otherwise it remains degraded/unknown. Responses never include executable paths, credential values, or environment dumps.
+
+Activity reuses the existing SQLite task/event store. Events are projected with stable event IDs, task/agent/project references, state, summary, timestamp, `approval_required`, and artifact references. `list_activity` is scoped to the authenticated agent unless the identity has `*`; the aggregate dashboard requires the dedicated `control-center:read` scope. Results are ordered by timestamp and event ID, newest first. The default/max bounds are configured by `AGENT_COMM_ACTIVITY_DEFAULT_LIMIT` (50) and `AGENT_COMM_ACTIVITY_MAX_LIMIT` (200).
+
+- `get_provider_readiness`
+- `list_provider_readiness`
+- `list_activity`
+- `get_control_center`
+
 ## Related local projects
 
 - `/home/stephen/projects/launcher-project-registry`
