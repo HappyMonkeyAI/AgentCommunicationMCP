@@ -92,6 +92,7 @@ def submit_task(
     project_slug: str | None = None,
     artifacts: list[str] | None = None,
     preferred_cli_profile: str | None = None,
+    max_attempts: int = 3,
 ) -> dict:
     """Submit an A2A-shaped task to a local agent. Optional preferred_cli_profile (codex, agy, …) is validated against YAML profiles."""
     check_mcp_auth_and_scope("task:submit")
@@ -102,6 +103,7 @@ def submit_task(
         project_slug,
         artifacts,
         preferred_cli_profile=preferred_cli_profile,
+        max_attempts=max_attempts,
     )
 
 

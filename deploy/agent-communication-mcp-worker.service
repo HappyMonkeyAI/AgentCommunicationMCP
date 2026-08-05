@@ -1,0 +1,17 @@
+[Unit]
+Description=Agent Communication MCP durable task worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/projects/projects/agent-communication-mcp
+Environment=AGENT_COMM_DATA_DIR=%h/projects/projects/agent-communication-mcp/.agent-data
+Environment=LAUNCHER_REGISTRY_PATH=%h/projects/projects/launcher-project-registry/registry.json
+Environment=AGENT_CLI_PROFILES_DIR=%h/projects/projects/ai-agent-teamwork-prompt/profiles
+Environment=PYTHONPATH=%h/projects/projects/agent-communication-mcp/src
+Environment=HERMES_BIN=%h/.local/bin/hermes
+ExecStart=%h/projects/projects/agent-communication-mcp/.venv/bin/python -m agent_communication_mcp.worker --once
+
+[Install]
+WantedBy=default.target
