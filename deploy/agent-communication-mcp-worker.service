@@ -1,0 +1,16 @@
+[Unit]
+Description=Agent Communication MCP durable task worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/stephen/projects/projects/agent-communication-mcp
+Environment=AGENT_COMM_DATA_DIR=/home/stephen/projects/projects/agent-communication-mcp/.agent-data
+Environment=LAUNCHER_REGISTRY_PATH=/home/stephen/projects/projects/launcher-project-registry/registry.json
+Environment=AGENT_CLI_PROFILES_DIR=/home/stephen/projects/projects/ai-agent-teamwork-prompt/profiles
+Environment=PYTHONPATH=/home/stephen/projects/projects/agent-communication-mcp/src
+ExecStart=/home/stephen/projects/projects/agent-communication-mcp/.venv/bin/python -m agent_communication_mcp.worker --once
+
+[Install]
+WantedBy=default.target

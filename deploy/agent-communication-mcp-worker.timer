@@ -1,0 +1,12 @@
+[Unit]
+Description=Run Agent Communication MCP task worker periodically
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=1min
+Persistent=true
+RandomizedDelaySec=10s
+Unit=agent-communication-mcp-worker.service
+
+[Install]
+WantedBy=timers.target

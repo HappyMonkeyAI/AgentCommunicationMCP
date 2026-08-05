@@ -22,43 +22,17 @@ class TaskService:
         self.store = store
 
     def drop_agent_message(self, agent_id: str, subject: str, body: str, artifacts: list[str] | None = None) -> dict[str, Any]:
-        record = {
-            "message_id": uuid.uuid4().hex,
-            "agent_id": agent_id,
-            "subject": subject,
-            "body": body,
-            "artifacts": artifacts or [],
-            "created_at": _now(),
-        }
+        record = {"message_id": uuid.uuid4().hex, "agent_id": agent_id, "subject": subject, "body": body, "artifacts": artifacts or [], "created_at": _now()}
         self.store.insert_message(record)
         return record
 
     def list_agent_inbox(self, agent_id: str) -> dict[str, Any]:
         return {"agent_id": agent_id, "messages": self.store.list_messages(agent_id), "tasks": self.store.list_tasks(agent_id)}
 
-    def submit_task(
-        self,
-        agent_id: str,
-        title: str,
-        instructions: str,
-        project_slug: str | None = None,
-        artifacts: list[str] | None = None,
-        preferred_cli_profile: str | None = None,
-    ) -> dict[str, Any]:
+    def submit_task(self, agent_id: str, title: str, instructions: str, project_slug: str | None = None, artifacts: list[str] | None = None, preferred_cli_profile: str | None = None, max_attempts: int = 3) -> dict[str, Any]:
         validated = validate_preferred_cli_profile(preferred_cli_profile)
         ts = _now()
-        record = {
-            "task_id": uuid.uuid4().hex,
-            "agent_id": agent_id,
-            "title": title,
-            "instructions": instructions,
-            "project_slug": project_slug,
-            "artifacts": artifacts or [],
-            "preferred_cli_profile": validated,
-            "state": "submitted",
-            "created_at": ts,
-            "updated_at": ts,
-        }
+        record = {"task_id": uuid.uuid4().hex, "agent_id": agent_id, "title": title, "instructions": instructions, "project_slug": project_slug, "artifacts": artifacts or [], "preferred_cli_profile": validated, "state": "submitted", "created_at": ts, "updated_at": ts, "max_attempts": max(1, max_attempts)}
         self.store.insert_task(record)
         self.store.insert_event({"event_id": uuid.uuid4().hex, "task_id": record["task_id"], "state": "submitted", "message": "task submitted", "created_at": ts})
         return record
