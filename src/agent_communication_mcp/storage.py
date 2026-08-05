@@ -43,16 +43,16 @@ class SQLiteStore:
     def _migrate_tasks(self, conn: sqlite3.Connection) -> None:
         cols = {row[1] for row in conn.execute("PRAGMA table_info(tasks)").fetchall()}
         migrations = {
-            "preferred_cli_profile": "TEXT",
-            "lease_owner": "TEXT",
-            "lease_expires_at": "TEXT",
-            "attempts": "INTEGER NOT NULL DEFAULT 0",
-            "last_error": "TEXT",
-            "max_attempts": "INTEGER NOT NULL DEFAULT 3",
+            "preferred_cli_profile": "ALTER TABLE tasks ADD COLUMN preferred_cli_profile TEXT",
+            "lease_owner": "ALTER TABLE tasks ADD COLUMN lease_owner TEXT",
+            "lease_expires_at": "ALTER TABLE tasks ADD COLUMN lease_expires_at TEXT",
+            "attempts": "ALTER TABLE tasks ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0",
+            "last_error": "ALTER TABLE tasks ADD COLUMN last_error TEXT",
+            "max_attempts": "ALTER TABLE tasks ADD COLUMN max_attempts INTEGER NOT NULL DEFAULT 3",
         }
-        for name, definition in migrations.items():
+        for name, statement in migrations.items():
             if name not in cols:
-                conn.execute(f"ALTER TABLE tasks ADD COLUMN {name} {definition}")
+                conn.execute(statement)
 
     def _connect_and(self):
         return self._connect()
@@ -68,10 +68,12 @@ class SQLiteStore:
         return [_message_from_row(row) for row in rows]
 
     def insert_task(self, record: dict[str, Any]) -> None:
-        columns = ("task_id", "agent_id", "title", "instructions", "project_slug", "artifacts_json", "state", "created_at", "updated_at", "preferred_cli_profile", "lease_owner", "lease_expires_at", "attempts", "last_error", "max_attempts")
         values = (record["task_id"], record["agent_id"], record["title"], record["instructions"], record.get("project_slug"), json.dumps(record["artifacts"]), record["state"], record["created_at"], record["updated_at"], record.get("preferred_cli_profile"), record.get("lease_owner"), record.get("lease_expires_at"), record.get("attempts", 0), record.get("last_error"), record.get("max_attempts", 3))
         with self._connect() as conn:
-            conn.execute(f"INSERT INTO tasks ({', '.join(columns)}) VALUES ({', '.join('?' for _ in columns)})", values)
+            conn.execute(
+                "INSERT INTO tasks (task_id, agent_id, title, instructions, project_slug, artifacts_json, state, created_at, updated_at, preferred_cli_profile, lease_owner, lease_expires_at, attempts, last_error, max_attempts) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                values,
+            )
 
     def update_task_state(self, task_id: str, state: str, updated_at: str) -> None:
         with self._connect() as conn:

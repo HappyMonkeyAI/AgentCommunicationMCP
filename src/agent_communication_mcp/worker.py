@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import subprocess
 import uuid
 from dataclasses import dataclass
@@ -10,7 +11,6 @@ from .launcher_registry import LauncherRegistry
 from .storage import SQLiteStore
 from .tasks import _now
 
-HERMES_BIN = "/home/stephen/.local/bin/hermes"
 MAX_OUTPUT = 64 * 1024
 
 
@@ -25,10 +25,11 @@ class WorkerResult:
 
 
 class TaskWorker:
-    def __init__(self, store: SQLiteStore, registry_path: str | Path | None = None, runner: Callable | None = None, lease_seconds: int = 300, max_output: int = MAX_OUTPUT):
+    def __init__(self, store: SQLiteStore, registry_path: str | Path | None = None, runner: Callable | None = None, lease_seconds: int = 300, max_output: int = MAX_OUTPUT, hermes_bin: str | None = None):
         self.store = store
         self.registry = LauncherRegistry(registry_path) if registry_path is not None else LauncherRegistry()
         self.runner = runner or self._run_subprocess
+        self.hermes_bin = hermes_bin or os.getenv("HERMES_BIN", "hermes")
         self.lease_seconds = lease_seconds
         self.max_output = max_output
 
@@ -45,7 +46,7 @@ class TaskWorker:
             workspace = self.registry.resolve_project_workspace(task["project_slug"] or "")
             if not workspace.get("found") or not workspace.get("is_dir"):
                 raise ValueError(f"project workspace is not valid: {task.get('project_slug')!r}")
-            argv = [HERMES_BIN, "chat", "--query", task["instructions"], "--quiet"]
+            argv = [self.hermes_bin, "chat", "--query", task["instructions"], "--quiet"]
             result = self.runner(argv, Path(workspace["path"]))
             if result.returncode == 0:
                 self.store.finish_task(task["task_id"], owner, "completed", "hermes completed", last_error=None)
@@ -77,7 +78,11 @@ def main(argv: list[str] | None = None) -> int:
     import os
     data_dir = Path(os.getenv("AGENT_COMM_DATA_DIR", ".agent-data"))
     registry_path = os.getenv("LAUNCHER_REGISTRY_PATH")
-    result = TaskWorker(SQLiteStore(data_dir / "tasks.sqlite3"), registry_path=registry_path).run_once(args.owner, dry_run=args.dry_run)
+    hermes_bin = os.getenv("HERMES_BIN")
+    worker_kwargs = {"registry_path": registry_path}
+    if hermes_bin:
+        worker_kwargs["hermes_bin"] = hermes_bin
+    result = TaskWorker(SQLiteStore(data_dir / "tasks.sqlite3"), **worker_kwargs).run_once(args.owner, dry_run=args.dry_run)
     print(result.state)
     return 0 if result.state in {"idle", "dry-run", "completed"} else 1
 

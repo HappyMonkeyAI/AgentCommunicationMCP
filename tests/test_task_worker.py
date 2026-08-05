@@ -72,10 +72,10 @@ def test_worker_executes_and_records_completed(tmp_path):
         calls.append((argv, cwd))
         return WorkerResult(returncode=0, stdout="ok", stderr="")
 
-    result = TaskWorker(store, registry_path=registry_path, runner=runner).run_once("worker-a")
+    result = TaskWorker(store, registry_path=registry_path, runner=runner, hermes_bin="/opt/hermes").run_once("worker-a")
 
     assert result.state == "completed"
-    assert calls[0][0] == ["/home/stephen/.local/bin/hermes", "chat", "--query", "Do the thing", "--quiet"]
+    assert calls[0][0] == ["/opt/hermes", "chat", "--query", "Do the thing", "--quiet"]
     assert calls[0][1] == workspace
     assert [event["state"] for event in store.list_events(task["task_id"])] == ["submitted", "working", "completed"]
 
