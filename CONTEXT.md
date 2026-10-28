@@ -26,8 +26,13 @@ Build a FastMCP HTTP/StreamableHTTP server that gives local agents safe shared t
 ## Initial agents
 
 - `server-agent`: nginx, docker/services, `/var/www`, logs; highest risk, narrowest writes.
-- `dev-agent`: `~/projects`, tests, git artifacts, implementation handoffs.
+- `dev-agent`: `~/projects`, tests, git artifacts, implementation handoffs; placement-aware tasks.
 - `desktop-agent`: user-session artifacts such as screenshots, Downloads, Obsidian notes; should default read-only until explicit scope grants.
+- `host-dev-215`: DevHost capability card (Sentinel URL, launcher path, gates, tool-belt roles only — no full MCP dump).
+
+## Placement / Sentinel gates (v0)
+
+`submit_task` accepts optional `placement_*`, `sentinel_lease_id`, `approval_required`, `require_sentinel_lease`. Durable worker will not run Hermes while `approval_required` and not `approve_task`'d; fails closed if `require_sentinel_lease` without a lease id.
 
 ## First tool surface
 

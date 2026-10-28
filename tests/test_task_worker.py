@@ -93,6 +93,62 @@ def test_worker_fails_without_valid_project_path(tmp_path):
     assert store.get_task(task["task_id"])["last_error"]
 
 
+def test_worker_waits_for_approval_before_hermes(tmp_path):
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    store = SQLiteStore(tmp_path / "tasks.sqlite3")
+    task = TaskService(store).submit_task(
+        "dev-agent",
+        "Remote",
+        "Do remote",
+        project_slug="demo",
+        approval_required=True,
+        sentinel_lease_id="lease-1",
+    )
+    registry_path = tmp_path / "registry.json"
+    registry_path.write_text(__import__("json").dumps({"projects": [{"slug": "demo", "path": str(workspace)}]}))
+    calls = []
+
+    result = TaskWorker(
+        store,
+        registry_path=registry_path,
+        runner=lambda *args: calls.append(args) or WorkerResult(returncode=0),
+    ).run_once("worker-a")
+
+    assert result.state == "input_required"
+    assert calls == []
+    assert store.get_task(task["task_id"])["state"] == "input_required"
+
+    TaskService(store).approve_task(task["task_id"])
+    result2 = TaskWorker(
+        store,
+        registry_path=registry_path,
+        runner=lambda *args: calls.append(args) or WorkerResult(returncode=0, stdout="ok"),
+    ).run_once("worker-b")
+    assert result2.state == "completed"
+    assert len(calls) == 1
+
+
+def test_worker_fails_when_sentinel_lease_required_but_missing(tmp_path):
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    store = SQLiteStore(tmp_path / "tasks.sqlite3")
+    task = TaskService(store).submit_task(
+        "dev-agent",
+        "Remote",
+        "Do remote",
+        project_slug="demo",
+        require_sentinel_lease=True,
+    )
+    registry_path = tmp_path / "registry.json"
+    registry_path.write_text(__import__("json").dumps({"projects": [{"slug": "demo", "path": str(workspace)}]}))
+
+    result = TaskWorker(store, registry_path=registry_path, runner=lambda *args: None).run_once("worker-a")
+    assert result.state == "failed"
+    assert "sentinel_lease_id" in result.error
+    assert store.get_task(task["task_id"])["state"] == "failed"
+
+
 def test_worker_module_help_is_available_without_launching_hermes():
     import subprocess, sys
     result = subprocess.run([sys.executable, "-m", "agent_communication_mcp.worker", "--help"], capture_output=True, text=True, env={**__import__("os").environ, "PYTHONPATH": "src"})

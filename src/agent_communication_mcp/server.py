@@ -93,8 +93,14 @@ def submit_task(
     artifacts: list[str] | None = None,
     preferred_cli_profile: str | None = None,
     max_attempts: int = 3,
+    placement_decision: str | None = None,
+    placement_host_id: str | None = None,
+    placement_base_url: str | None = None,
+    sentinel_lease_id: str | None = None,
+    approval_required: bool = False,
+    require_sentinel_lease: bool = False,
 ) -> dict:
-    """Submit an A2A-shaped task to a local agent. Optional preferred_cli_profile (codex, agy, …) is validated against YAML profiles."""
+    """Submit an A2A-shaped task. Optional placement/Sentinel lease fields gate remote Hermes via approve_task."""
     check_mcp_auth_and_scope("task:submit")
     return _tasks.submit_task(
         agent_id,
@@ -104,7 +110,22 @@ def submit_task(
         artifacts,
         preferred_cli_profile=preferred_cli_profile,
         max_attempts=max_attempts,
+        placement_decision=placement_decision,
+        placement_host_id=placement_host_id,
+        placement_base_url=placement_base_url,
+        sentinel_lease_id=sentinel_lease_id,
+        approval_required=approval_required,
+        require_sentinel_lease=require_sentinel_lease,
     )
+
+
+def approve_task(task_id: str) -> dict:
+    """Mark a gated task approved so the durable worker may run Hermes."""
+    identity = check_mcp_auth_and_scope("task:update")
+    task = _tasks.get_task(task_id)
+    if identity.agent_id != task["agent_id"] and "*" not in identity.scopes:
+        raise AuthorizationError(f"{identity.agent_id} is not authorized to approve task {task_id}")
+    return _tasks.approve_task(task_id)
 
 
 def get_task(task_id: str) -> dict:
@@ -202,7 +223,11 @@ def get_coordination_bootstrap() -> dict:
             "get_cli_profile",
             "submit_task",
         ],
-        "submit_task_note": "Pass preferred_cli_profile to pin codex/agy/opencode; omit to let worker call suggest_cli_for_task on instructions.",
+        "submit_task_note": (
+            "Pass preferred_cli_profile to pin codex/agy/opencode/hermes; omit to let worker suggest. "
+            "For DevHost remote Hermes: set placement_* from Resource Sentinel, approval_required=true, "
+            "then call approve_task after human/agent approval."
+        ),
     }
 
 
@@ -242,6 +267,7 @@ for _tool in [
     drop_agent_message,
     list_agent_inbox,
     submit_task,
+    approve_task,
     get_task,
     append_task_event,
     publish_artifact,
