@@ -1,0 +1,36 @@
+{
+  "id": "host-dev-215",
+  "name": "DevHost stephen-firewall",
+  "description": "LAN DevHost capability card for 192.168.5.215: Sentinel peer, live launcher registry, Agent Communication mailbox/tasks, and gated Hermes worker.",
+  "endpoint": "mcp://agent-communication/host-dev-215",
+  "host_id": "dev-215",
+  "auth": {"scheme": "bearer", "token_env": "AGENT_COMM_DEV_TOKEN"},
+  "capabilities": [
+    "placement-peer",
+    "project-registry",
+    "mailbox-tasks",
+    "hermes-worker-gated",
+    "code",
+    "tests",
+    "git",
+    "project-context"
+  ],
+  "endpoints": {
+    "resource_sentinel": "http://192.168.5.215:8800",
+    "launcher_registry": "/var/www/html/launcher",
+    "agent_communication": "mcp://agent-communication"
+  },
+  "gates": {
+    "heavy_work": "Call Resource Sentinel recommend_execution_host then request_execution_slot on the chosen host before heavy fan-out.",
+    "remote_hermes": "submit_task with approval_required=true and sentinel_lease_id; worker waits for approve_task."
+  },
+  "tool_belt": {
+    "mode": "dynamic_proxy_summary",
+    "server_roles": [
+      "resource_sentinel:admission",
+      "launcher_registry:projects-ports",
+      "agent_communication:mailbox-tasks",
+      "hermes:cli-worker-gated"
+    ]
+  }
+}

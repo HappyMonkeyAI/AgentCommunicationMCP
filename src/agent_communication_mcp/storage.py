@@ -49,6 +49,7 @@ class SQLiteStore:
             "attempts": "ALTER TABLE tasks ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0",
             "last_error": "ALTER TABLE tasks ADD COLUMN last_error TEXT",
             "max_attempts": "ALTER TABLE tasks ADD COLUMN max_attempts INTEGER NOT NULL DEFAULT 3",
+            "placement_json": "ALTER TABLE tasks ADD COLUMN placement_json TEXT",
         }
         for name, statement in migrations.items():
             if name not in cols:
@@ -68,12 +69,44 @@ class SQLiteStore:
         return [_message_from_row(row) for row in rows]
 
     def insert_task(self, record: dict[str, Any]) -> None:
-        values = (record["task_id"], record["agent_id"], record["title"], record["instructions"], record.get("project_slug"), json.dumps(record["artifacts"]), record["state"], record["created_at"], record["updated_at"], record.get("preferred_cli_profile"), record.get("lease_owner"), record.get("lease_expires_at"), record.get("attempts", 0), record.get("last_error"), record.get("max_attempts", 3))
+        placement = record.get("placement")
+        values = (
+            record["task_id"],
+            record["agent_id"],
+            record["title"],
+            record["instructions"],
+            record.get("project_slug"),
+            json.dumps(record["artifacts"]),
+            record["state"],
+            record["created_at"],
+            record["updated_at"],
+            record.get("preferred_cli_profile"),
+            record.get("lease_owner"),
+            record.get("lease_expires_at"),
+            record.get("attempts", 0),
+            record.get("last_error"),
+            record.get("max_attempts", 3),
+            json.dumps(placement) if placement is not None else None,
+        )
         with self._connect() as conn:
             conn.execute(
-                "INSERT INTO tasks (task_id, agent_id, title, instructions, project_slug, artifacts_json, state, created_at, updated_at, preferred_cli_profile, lease_owner, lease_expires_at, attempts, last_error, max_attempts) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO tasks (task_id, agent_id, title, instructions, project_slug, artifacts_json, state, created_at, updated_at, preferred_cli_profile, lease_owner, lease_expires_at, attempts, last_error, max_attempts, placement_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 values,
             )
+
+    def update_task_placement(self, task_id: str, placement: dict[str, Any], *, state: str | None = None) -> None:
+        now = _now()
+        with self._connect() as conn:
+            if state is None:
+                conn.execute(
+                    "UPDATE tasks SET placement_json=?, updated_at=? WHERE task_id=?",
+                    (json.dumps(placement), now, task_id),
+                )
+            else:
+                conn.execute(
+                    "UPDATE tasks SET placement_json=?, state=?, updated_at=? WHERE task_id=?",
+                    (json.dumps(placement), state, now, task_id),
+                )
 
     def update_task_state(self, task_id: str, state: str, updated_at: str) -> None:
         with self._connect() as conn:
@@ -157,4 +190,11 @@ def _message_from_row(row: sqlite3.Row) -> dict[str, Any]:
 
 
 def _task_from_row(row: sqlite3.Row) -> dict[str, Any]:
-    data = dict(row); data["artifacts"] = json.loads(data.pop("artifacts_json")); return data
+    data = dict(row)
+    data["artifacts"] = json.loads(data.pop("artifacts_json"))
+    raw_placement = data.pop("placement_json", None)
+    if raw_placement:
+        data["placement"] = json.loads(raw_placement)
+    else:
+        data["placement"] = None
+    return data

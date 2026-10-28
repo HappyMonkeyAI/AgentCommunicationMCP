@@ -42,6 +42,24 @@ class TaskWorker:
             self.store.set_task_lease(task["task_id"], owner, None)
             self.store.update_task_state(task["task_id"], "submitted", _now())
             return WorkerResult(task_id=task["task_id"], state="dry-run")
+        placement = task.get("placement") or {}
+        if placement.get("approval_required") and not placement.get("approved"):
+            self.store.finish_task(
+                task["task_id"],
+                owner,
+                "input_required",
+                "awaiting approval before gated Hermes",
+            )
+            return WorkerResult(task_id=task["task_id"], state="input_required", error="approval_required")
+        if placement.get("require_sentinel_lease") and not placement.get("sentinel_lease_id"):
+            self.store.finish_task(
+                task["task_id"],
+                owner,
+                "failed",
+                "sentinel lease required for gated remote work",
+                last_error="missing sentinel_lease_id",
+            )
+            return WorkerResult(task_id=task["task_id"], state="failed", error="missing sentinel_lease_id")
         try:
             workspace = self.registry.resolve_project_workspace(task["project_slug"] or "")
             if not workspace.get("found") or not workspace.get("is_dir"):

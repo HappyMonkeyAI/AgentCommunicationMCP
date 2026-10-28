@@ -1,8 +1,29 @@
 {
   "id": "dev-agent",
   "name": "Dev Agent",
-  "description": "Development agent for project code, tests, git artifacts, implementation handoffs, and launcher registry context.",
+  "description": "Development agent for project code, tests, git artifacts, implementation handoffs, and launcher registry context. Prefer host-dev-215 for LAN DevHost endpoints.",
   "endpoint": "mcp://agent-communication/dev-agent",
   "auth": {"scheme": "bearer", "token_env": "AGENT_COMM_DEV_TOKEN"},
-  "capabilities": ["code", "tests", "git", "project-context", "implementation-handoff"]
+  "capabilities": [
+    "code",
+    "tests",
+    "git",
+    "project-context",
+    "implementation-handoff",
+    "placement-aware-tasks"
+  ],
+  "gates": {
+    "heavy_work": "Call Resource Sentinel recommend_execution_host then request_execution_slot on the chosen host before heavy fan-out.",
+    "remote_hermes": "submit_task with approval_required=true and sentinel_lease_id from the peer Sentinel; worker will not run Hermes until approve_task."
+  },
+  "tool_belt": {
+    "mode": "dynamic_proxy_summary",
+    "note": "Publish server roles only; activate tools via DynamicMCPProxy / task hint — do not dump full tool schemas in the card.",
+    "server_roles": [
+      "resource_sentinel:admission",
+      "launcher_registry:projects-ports",
+      "agent_communication:mailbox-tasks",
+      "hermes:cli-worker-gated"
+    ]
+  }
 }
